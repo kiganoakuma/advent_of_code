@@ -1,86 +1,50 @@
 import sys
-import re
+from collections import defaultdict
 
-def create_board(row_list):
-    grid = {}
-    for r in range(len(row_list)):
-        row = row_list[r]
-        for c in range(len(row)):
-            grid[f'{r}, {c}'] = row_list[r][c]
-    return grid
-
-
-def get_matches(y, x, dict, found, row_list):
-    found_c = found.copy()
-    if y - 3 >= 0 and x - 3 >= 0:
-        tl = dict[f'{y}, {x}'] +  dict[f'{y - 1}, {x - 1}'] + dict[f'{y - 2}, {x - 2}'] + dict[f'{y - 3}, {x - 3}']  
-        tlc = f'{y}, {x} - {y - 3}, {x - 3}'
-        if tl == 'XMAS':
-            found_c[tlc] = tl
-
-    if y - 3 >= 0:
-        t = dict[f'{y}, {x}'] +  dict[f'{y - 1}, {x}'] + dict[f'{y - 2}, {x}'] + dict[f'{y - 3}, {x}']  
-        tc = f'{y}, {x} - {y - 3}, {x}'
-        if t == 'XMAS':
-            found_c[tc] = t
-
-    if y - 3 >= 0 and x + 3 <= len(row_list[0]) - 1:
-        tr = dict[f'{y}, {x}'] +  dict[f'{y - 1}, {x + 1}'] + dict[f'{y - 2}, {x + 2}'] + dict[f'{y - 3}, {x + 3}']  
-        trc = f'{y}, {x} - {y - 3}, {x + 3}'
-        if tr == 'XMAS':
-            found_c[trc] = tr
-
-    if x - 3 >= 0:
-        cl = dict[f'{y}, {x}'] +  dict[f'{y}, {x - 1}'] + dict[f'{y}, {x - 2}'] + dict[f'{y}, {x - 3}']  
-        clc = f'{y}, {x} - {y}, {x - 3}'
-        if cl == 'XMAS':
-            found_c[clc] = cl
-
-
-    if x + 3 <= len(row_list[0]) - 1:
-        cr = dict[f'{y}, {x}'] +  dict[f'{y}, {x + 1}'] + dict[f'{y}, {x + 2}'] + dict[f'{y}, {x + 3}']  
-        crc = f'{y}, {x} - {y}, {x + 3}'
-        if cr == 'XMAS':
-            found_c[crc] = cr
-
-    if y + 3 <= len(row_list) - 1 and x - 3 >= 0:
-        bl = dict[f'{y}, {x}'] +  dict[f'{y + 1}, {x - 1}'] + dict[f'{y + 2}, {x - 2}'] + dict[f'{y + 3}, {x - 3}']  
-        blc = f'{y}, {x} - {y + 3}, {x - 3}'
-        if bl == 'XMAS':
-            found_c[blc] = bl
-
-    if y + 3 <= len(row_list) - 1:
-        b = dict[f'{y}, {x}'] +  dict[f'{y + 1}, {x}'] + dict[f'{y + 2}, {x}'] + dict[f'{y + 3}, {x}']  
-        bc = f'{y}, {x} - {y + 3}, {x}'
-        if b == 'XMAS':
-            found_c[bc] = b
-
-    if y + 3 <= len(row_list) - 1 and x + 3 <= len(row_list[0]) - 1:
-        br = dict[f'{y}, {x}'] +  dict[f'{y + 1}, {x + 1}'] + dict[f'{y + 2}, {x + 2}'] + dict[f'{y + 3}, {x + 3}']  
-        brc = f'{y}, {x} - {y + 3}, {x + 3}'
-        if br == 'XMAS':
-            found_c[brc] = br
-
-    return found_c
+def find_xmas(grid, rows, cols):
+    directions = [
+        (-1, -1), (-1, 0), (-1, 1),  # top-left, top, top-right
+        (0, -1),          (0, 1),     # left, right
+        (1, -1),  (1, 0),  (1, 1)     # bottom-left, bottom, bottom-right
+    ]
     
-if len(sys.argv) > 1:
-    file_inp = sys.argv[1]
-else:
+    found = defaultdict(str)
+    target = "XMAS"
+    
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] != 'X':  # Only start checking if we find an 'X'
+                continue
+                
+            # Check all 8 directions
+            for dy, dx in directions:
+                word = ""
+                coords = []
+                
+                # Try to build "XMAS" in this direction
+                for i in range(4):  # XMAS is 4 letters
+                    new_r, new_c = r + (dy * i), c + (dx * i)
+                    
+                    # Check bounds
+                    if 0 <= new_r < rows and 0 <= new_c < cols:
+                        word += grid[new_r][new_c]
+                        coords.append((new_r, new_c))
+                    else:
+                        break
+                        
+                if word == target:
+                    # Store using your coordinate format
+                    coord_key = f"{r}, {c} - {coords[-1][0]}, {coords[-1][1]}"
+                    found[coord_key] = word
+                    
+    return len(found)
+
+# Read input
+if len(sys.argv) < 2:
     raise Exception("please provide a filename")
 
-with open(file_inp, 'r') as file:
-    lines = []
-    for line in file:
-        letters = list(line.strip())
-        lines.append(letters)
+with open(sys.argv[1], 'r') as file:
+    grid = [list(line.strip()) for line in file]
 
-
-board = create_board(lines)    
-found_matches = {}
-target = 'xmas'
-current_found = ['X']
-for key in board:
-    y, x = map(int, re.findall(r'[0-9]+', key))
-    found_matches = get_matches(y, x, board, found_matches, lines)
-
-print(len(found_matches))
+rows, cols = len(grid), len(grid[0])
+print(find_xmas(grid, rows, cols))
